@@ -1,0 +1,296 @@
+---
+#- hosts: servers
+#  become: true
+#  vars:
+#    username: aquino
+#    password: hello
+#  tasks:
+
+
+# SERVERS MAIN.YML
+
+  - name: install updates (CentOS)
+    dnf:
+      update_only: yes
+      update_cache: yes
+    when: ansible_distribution == "CentOS"
+
+  - name: install updates (Ubuntu)
+    apt:
+       upgrade: dist
+       update_cache: yes
+    when: ansible_distribution == "Ubuntu"
+
+  - name: install apache and php for Ubuntu
+    apt:
+      name:
+        - apache2
+        - libapache2-mod-php
+      state: latest
+    when: ansible_distribution == "Ubuntu"
+
+  - name: install apache and php for CentOS
+    dnf:
+      name:
+        - httpd
+        - php
+      state: latest
+    when: ansible_distribution == "CentOS"
+
+  - name: install mariadb package (Ubuntu)
+    apt:
+      name: mariadb-server
+      state: latest
+    when: ansible_distribution == "Ubuntu"
+
+  - name: install mariadb package (CentOS)
+    dnf:
+      name: mariadb-server
+      state: latest
+    when: ansible_distribution == "CentOS"
+
+
+
+############################# INSTALL NAGIOS FOR UBUNTU ###################################
+
+  - name: install the required packages for Ubuntu
+    command: sudo apt install wget unzip curl openssl build-essential libgd-dev libssl-dev libapache2-mod-php php-gd php apache2 -y
+    when: ansible_distribution == "Ubuntu"
+
+  - name: download nagios core setup files for Ubuntu
+    command: wget https://assets.nagios.com/downloads/nagioscore/releases/nagios-4.4.6.tar.gz
+    when: ansible_distribution == "Ubuntu"
+
+  - name: extracting the downloaded file for Ubuntu
+    command: sudo tar -zxvf nagios-4.4.6.tar.gz
+    when: ansible_distribution == "Ubuntu"
+
+  - name: running nagios core configure script for Ubuntu
+    command: ./configure
+    args:
+      chdir: nagios-4.4.6/
+    when: ansible_distribution == "Ubuntu"
+
+  - name: compile the main programs and CGIs for Ubuntu
+    command: sudo make all
+    args:
+      chdir: nagios-4.4.6/
+    when: ansible_distribution == "Ubuntu"
+
+  - name: make and install group and user for Ubuntu
+    command: sudo make install-groups-users
+    args:
+      chdir: nagios-4.4.6/
+    when: ansible_distribution == "Ubuntu"
+
+  - name: add www-data directories user to nagios group for Ubuntu
+    command: sudo usermod -a -G nagios www-data
+    args:
+      chdir: nagios-4.4.6/
+    when: ansible_distribution == "Ubuntu"
+
+  - name: install nagios for Ubuntu
+    command: sudo make install
+    args:
+      chdir: nagios-4.4.6/
+    when: ansible_distribution == "Ubuntu"
+
+  - name: initalize all the installation configuration scripts for Ubuntu
+    command: sudo make install-init
+    args:
+      chdir: nagios-4.4.6/
+    when: ansible_distribution == "Ubuntu"
+
+  - name: install and configure permissions on the config's directory for Ubuntu
+    command: sudo make install-commandmode
+    args:
+      chdir: nagios-4.4.6/
+    when: ansible_distribution == "Ubuntu"
+
+  - name: install sample config files for Ubuntu
+    command: sudo make install-config
+    args:
+      chdir: nagios-4.4.6/
+    when: ansible_distribution == "Ubuntu"
+
+#  - name: install apache files for Ubuntu
+#    command: sudo make install-webconf
+#    args:
+#      chdir: nagios-4.4.6/
+#    when: ansible_distribution == "Ubuntu"
+
+  - name: enable apache rewrite mode for Ubuntu
+    command: sudo a2enmod rewrite
+    args:
+      chdir: nagios-4.4.6/
+    when: ansible_distribution == "Ubuntu"
+
+  - name: enable CGI config for Ubuntu
+    command: sudo a2enmod cgi
+    args:
+      chdir: nagios-4.4.6/
+    when: ansible_distribution == "Ubuntu"
+
+  - name: restart the apache service for Ubuntu
+    command: sudo systemctl restart apache2
+    args:
+      chdir: nagios-4.4.6/
+    when: ansible_distribution == "Ubuntu"
+
+  - name: create a user and set the password for Ubuntu
+    command: sudo htpasswd -b /usr/local/nagios/etc/htpasswd.users aquino hello
+    when: ansible_distribution == "CentOS"
+
+  - name: download the nagions plugin for Ubuntu
+    command: wget https://nagios-plugins.org/download/nagios-plugins-2.3.3.tar.gz
+    when: ansible_distribution == "Ubuntu"
+
+  - name: extract the plugin for Ubuntu
+    command: sudo tar -zxvf nagios-plugins-2.3.3.tar.gz
+    when: ansible_distribution == "Ubuntu"
+
+  - name: navigating to plugin's directory and run the plugin configure script for Ubuntu
+    command: sudo ./configure --with-nagios-user=nagios --with-nagios-group=nagios
+    args:
+      chdir: nagios-plugins-2.3.3/
+    when: ansible_distribution == "Ubuntu"
+
+  - name: compile nagios plugins for Ubuntu
+    command: sudo make
+    args:
+      chdir: nagios-plugins-2.3.3/
+    when: ansible_distribution == "Ubuntu"
+
+  - name: install the plugins for Ubuntu
+    command: sudo make install
+    args:
+      chdir: nagios-plugins-2.3.3/
+    when: ansible_distribution == "Ubuntu"
+
+  - name: start nagios service for Ubuntu
+    command: sudo systemctl start nagios
+    when: ansible_distribution == "Ubuntu"
+
+  - name: enable nagios service for Ubuntu
+    command: sudo systemctl enable nagios
+    when: ansible_distribution == "Ubuntu"
+
+#################### NAGIOS FOR CENTOS #######################
+
+  - name: install the programs for the core  to fucntion for CentOS
+    command: sudo dnf install httpd php php-cli gcc glibc glibc-common gd gd-devel net-snmp openssl-devel wget unzip -y
+    when: ansible_distribution == "CentOS"
+
+  - name: create user for nagios for CentOS
+    command: sudo useradd nagios6
+    when: ansible_distribution == "CentOS"
+
+  - name: create group for nagios for CentOS
+    command: sudo groupadd nagcmd6
+    when: ansible_distribution == "CentOS"
+
+  - name: modify the user properties for nagios for CentOS
+    command: usermod -a -G nagcmd nagios
+    when: ansible_distribution == "CentOS"
+
+  - name: modify the user properties for apache for CentOS
+    command: sudo usermod -a -G nagcmd apache
+    when: ansible_distribution == "CentOS"
+
+  - name: download nagios-core for CentOS
+    command: sudo wget https://assets.nagios.com/downloads/nagioscore/releases/nagios-4.1.1.tar.gz
+    args:
+      chdir: /tmp/
+    when: ansible_distribution == "CentOS"
+
+  - name: download nagios-plugins for CentOS
+    command: sudo wget http://www.nagios-plugins.org/download/nagios-plugins-2.1.1.tar.gz
+    args:
+      chdir: /tmp/
+    when: ansible_distribution == "CentOS"
+
+  - name: extract nagios-core for CentOS
+    command: sudo tar zxf nagios-4.1.1.tar.gz
+    args:
+      chdir: /tmp/
+    when: ansible_distribution == "CentOS"
+
+  - name: extract nagios-plugins for CentOS
+    command: sudo tar zxf nagios-plugins-2.1.1.tar.gz
+    args:
+      chdir: /tmp/
+    when: ansible_distribution == "CentOS"
+
+  - name: compiling nagios for CentOS
+    command: sudo ./configure --with-command-group=nagcmd
+    args:
+      chdir: /tmp/nagios-4.1.1/
+    when: ansible_distribution == "CentOS"
+
+  - name: install the nagios for CentOS
+    command: sudo make install
+    args:
+      chdir: /tmp/nagios-4.1.1/
+    when: ansible_distribution == "CentOS"
+
+  - name: intialize the configuration scripts for CentOS
+    command: sudo make install-init
+    args:
+      chdir: /tmp/nagios-4.1.1/
+    when: ansible_distribution == "CentOS"
+
+  - name: install the configuration for CentOS
+    command: sudo make install-config
+    args:
+      chdir: /tmp/nagios-4.1.1/
+    when: ansible_distribution == "CentOS"
+
+  - name: install and configure permissions on the config's directory for CentOS
+    command: sudo make install-commandmode
+    args:
+      chdir: /tmp/nagios-4.1.1/
+    when: ansible_distribution == "CentOS"
+
+#  - name: install the web configurations for CentOS
+#    command: sudo make install-webconf
+#    args:
+#      chdir: /tmp/nagios-4.1.1/
+#    when: ansible_distribution == "CentOS"
+
+  - name: create an admin and password for nagios for CentOS
+    command: sudo htpasswd -b /usr/local/nagios/etc/htpasswd.users aquino hello
+    when: ansible_distribution == "CentOS"
+
+  - name: install nagios plugins for utilizing checks for  CentOS
+    command: sudo ./configure --with-nagios-user=nagios --with-nagios-group=nagios --with-openssl
+    args:
+      chdir: /tmp/nagios-plugins-2.1.1/
+    when: ansible_distribution == "CentOS"
+
+  - name: compile the nagios-plugins for CentOS
+    command: sudo make all
+    args:
+      chdir: /tmp/nagios-plugins-2.1.1/
+    when: ansible_distribution == "CentOS"
+
+  - name: install the compiled nagios-plugins
+    command: sudo make install
+    args:
+      chdir: /tmp/nagios-plugins-2.1.1/
+    when: ansible_distribution == "CentOS"
+
+  - name: start httpd service for CentOS
+    command: sudo service httpd start
+    when: ansible_distribution == "CentOS"
+
+  - name: start nagios service for CentOS
+    command: sudo service nagios start
+    when: ansible_distribution == "CentOS"
+
+  - name: add tcp 80 port for CentOS
+    command: sudo firewall-cmd --zone=public --add-port=80/tcp --permanent
+    when: ansible_distribution == "CentOS"
+
+  - name: reload the firewall for CentOS
+    command: sudo firewall-cmd --reload
+    when: ansible_distribution == "CentOS"
